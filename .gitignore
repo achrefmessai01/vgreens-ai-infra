@@ -1,0 +1,6 @@
+.vault-password
+*.retry
+__pycache__/
+.DS_Store
+# never commit a decrypted vault
+inventories/production/group_vars/vault_plain.yml

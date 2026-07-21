@@ -1,0 +1,75 @@
+---
+# Read-only audit — Phase A. Gathers facts and inspects the platform WITHOUT
+# making any change (no become, all commands changed_when:false). Safe to run
+# any time. This is the first Ansible touch of production.
+- name: vGreens platform — read-only audit
+  hosts: platform
+  gather_facts: true
+  become: false
+  tasks:
+    - name: Host summary
+      ansible.builtin.debug:
+        msg: >-
+          {{ ansible_hostname }} |
+          {{ ansible_distribution }} {{ ansible_distribution_version }} |
+          {{ ansible_processor_vcpus }} vCPU |
+          {{ (ansible_memtotal_mb / 1024) | round(1) }} GiB RAM
+
+    - name: Platform systemd services (active state)
+      ansible.builtin.command: "systemctl is-active {{ item }}"
+      loop: "{{ platform_services }}"
+      register: svc_state
+      changed_when: false
+      failed_when: false
+
+    - name: Service states
+      ansible.builtin.debug:
+        msg: "{{ item.item }} -> {{ item.stdout | default('unknown') }}"
+      loop: "{{ svc_state.results }}"
+      loop_control:
+        label: "{{ item.item }}"
+
+    - name: Docker + buildx versions
+      ansible.builtin.command: "{{ item }}"
+      loop:
+        - "docker --version"
+        - "docker buildx version"
+      register: docker_ver
+      changed_when: false
+      failed_when: false
+
+    - name: Docker versions
+      ansible.builtin.debug:
+        msg: "{{ docker_ver.results | map(attribute='stdout') | select('string') | list }}"
+
+    - name: NAS mount + free space
+      ansible.builtin.command: "df -h {{ nas_mount }}"
+      register: nas_df
+      changed_when: false
+      failed_when: false
+
+    - name: NAS
+      ansible.builtin.debug:
+        var: nas_df.stdout_lines
+
+    - name: Local disk (platform root)
+      ansible.builtin.command: "df -h {{ platform_root }}"
+      register: root_df
+      changed_when: false
+      failed_when: false
+
+    - name: Local disk
+      ansible.builtin.debug:
+        var: root_df.stdout_lines
+
+    - name: GPUs
+      ansible.builtin.command: >-
+        nvidia-smi --query-gpu=index,name,memory.total,utilization.gpu
+        --format=csv,noheader
+      register: gpus
+      changed_when: false
+      failed_when: false
+
+    - name: GPU inventory
+      ansible.builtin.debug:
+        var: gpus.stdout_lines

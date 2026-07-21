@@ -1,0 +1,8 @@
+# TEMPLATE ONLY — do not put real secrets here. Create the real, encrypted file:
+#   ansible-vault create inventories/production/group_vars/vault.yml
+# and put these keys in it. It is decrypted at runtime via .vault-password.
+#
+# vault_roboflow_api_key: "..."
+# vault_ci_api_token: "..."
+# vault_gitlab_runner_token: "..."
+# vault_nas_password: "..."

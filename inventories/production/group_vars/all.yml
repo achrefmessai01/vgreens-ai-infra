@@ -1,0 +1,12 @@
+# Non-secret, shared facts about the deployment. Secrets live in vault.yml
+# (encrypted with ansible-vault) — never here.
+platform_root: /opt/vgreens-ai
+nas_mount: /mnt/vgreens_storage
+nas_datasets: /mnt/vgreens_storage/ai/datasets
+nvme_cache: /nvme/cache
+platform_services:
+  - vgreens-ai-api
+  - vgreens-worker@0
+  - vgreens-worker@1
+  - vgreens-dataset-worker
+  - mount-nas
