@@ -5,5 +5,9 @@
 caddy_api_host: "vgreens-ai.lan"
 caddy_api_upstream: "127.0.0.1:8000"
 
+# When set, Caddy only listens on this interface/IP (e.g. the VPN address) so the
+# proxy isn't exposed on a public interface. Empty = listen on all interfaces.
+caddy_bind: ""
+
 # Where Caddy stores its internally-generated CA + leaf certs.
 caddy_data_dir: "/var/lib/caddy/.local/share/caddy"

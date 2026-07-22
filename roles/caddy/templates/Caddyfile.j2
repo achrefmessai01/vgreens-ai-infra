@@ -7,6 +7,9 @@
 # (or accept the browser warning). The API still binds 127.0.0.1:8000 locally;
 # only Caddy is exposed on 443.
 {{ caddy_api_host }} {
+{% if caddy_bind %}
+    bind {{ caddy_bind }}
+{% endif %}
     tls internal
     encode gzip
     reverse_proxy {{ caddy_api_upstream }}
