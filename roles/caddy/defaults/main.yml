@@ -1,0 +1,9 @@
+---
+# Hostname clients will use for the Job API (resolve it to gpu-worker-01's LAN IP
+# via internal DNS or an /etc/hosts entry). Override in group_vars if you have a
+# real internal domain.
+caddy_api_host: "vgreens-ai.lan"
+caddy_api_upstream: "127.0.0.1:8000"
+
+# Where Caddy stores its internally-generated CA + leaf certs.
+caddy_data_dir: "/var/lib/caddy/.local/share/caddy"

@@ -1,0 +1,9 @@
+---
+# Milestone 7 — HTTPS reverse proxy (Caddy, internal CA) in front of the Job API
+# on gpu-worker-01. The API keeps binding 127.0.0.1:8000; only Caddy is exposed
+# on 443, so clients reach it over the VPN at https://{{ caddy_api_host }}.
+- name: Deploy Caddy reverse proxy for the Job API
+  hosts: platform
+  become: true
+  roles:
+    - caddy
