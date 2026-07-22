@@ -8,7 +8,9 @@
   vars:
     # sv01 reaches the API on gpu-worker over the LAN/VPN; clients reach sv01's
     # VPN IP. Bind to that IP so the proxy is not exposed on sv01's public NIC.
+    # 443 is taken by nginx (livestream), so use 8443.
     caddy_api_upstream: "172.16.20.89:8000"
     caddy_bind: "{{ ansible_host }}"
+    caddy_https_port: 8443
   roles:
     - caddy

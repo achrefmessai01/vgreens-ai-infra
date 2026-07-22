@@ -5,6 +5,10 @@
 caddy_api_host: "vgreens-ai.lan"
 caddy_api_upstream: "127.0.0.1:8000"
 
+# HTTPS port for the proxy. Use a non-443 port when 443 is already taken on the
+# host (e.g. sv01 runs nginx on 443). Clients then use https://host:PORT.
+caddy_https_port: 443
+
 # When set, Caddy only listens on this interface/IP (e.g. the VPN address) so the
 # proxy isn't exposed on a public interface. Empty = listen on all interfaces.
 caddy_bind: ""

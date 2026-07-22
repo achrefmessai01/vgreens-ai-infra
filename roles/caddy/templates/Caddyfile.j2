@@ -1,12 +1,14 @@
 # Managed by Ansible (roles/caddy). Do not edit by hand.
 {
     admin off
+    # internal CA only — no ACME, so no :80 redirect listener (avoids clashing
+    # with any nginx/other service already using port 80/443 on this host).
+    auto_https disable_redirects
 }
 
 # Job API over HTTPS with Caddy's internal CA. Clients trust the CA once
-# (or accept the browser warning). The API still binds 127.0.0.1:8000 locally;
-# only Caddy is exposed on 443.
-{{ caddy_api_host }} {
+# (or accept the browser warning). The API still binds 127.0.0.1:8000 locally.
+{{ caddy_api_host }}:{{ caddy_https_port }} {
 {% if caddy_bind %}
     bind {{ caddy_bind }}
 {% endif %}
