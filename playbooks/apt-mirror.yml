@@ -1,0 +1,8 @@
+---
+# Point apt at a reliable mirror on every managed host (platform + runners).
+# Idempotent: re-running is a no-op once the mirror is already set.
+- name: Set a reliable apt mirror on all hosts
+  hosts: all
+  become: true
+  roles:
+    - apt_mirror

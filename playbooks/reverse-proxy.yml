@@ -12,5 +12,8 @@
     caddy_api_upstream: "172.16.20.89:8000"
     caddy_bind: "{{ ansible_host }}"
     caddy_https_port: 9443
+    # Web UI: serve the locally-built SPA (build it first: cd vgreens-ai-web && npm run build)
+    caddy_web_root: "/var/www/vgreens-ai-web"
+    caddy_web_src: "{{ lookup('env', 'HOME') }}/Desktop/vgreens-ai-web/dist"
   roles:
     - caddy

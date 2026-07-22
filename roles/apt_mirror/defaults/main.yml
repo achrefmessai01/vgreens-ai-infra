@@ -1,0 +1,6 @@
+---
+# The default archive.ubuntu.com round-robin has been unreachable from these
+# hosts; the German country mirror is fast and reliable. Change this if you move
+# regions or run your own mirror.
+apt_mirror_from: "archive.ubuntu.com"
+apt_mirror_to: "de.archive.ubuntu.com"

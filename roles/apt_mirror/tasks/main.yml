@@ -1,0 +1,39 @@
+---
+# Repoint apt away from the unreliable default mirror. Handles both the classic
+# /etc/apt/sources.list (jammy) and deb822 /etc/apt/sources.list.d/*.sources
+# (noble). security.ubuntu.com is left alone (it has been reachable).
+- name: Check for classic sources.list
+  ansible.builtin.stat:
+    path: /etc/apt/sources.list
+  register: classic_list
+  become: true
+
+- name: Repoint classic sources.list to the reliable mirror
+  ansible.builtin.replace:
+    path: /etc/apt/sources.list
+    regexp: '//{{ apt_mirror_from | regex_escape }}'
+    replace: '//{{ apt_mirror_to }}'
+  when: classic_list.stat.exists
+  become: true
+
+- name: Find deb822 source files
+  ansible.builtin.find:
+    paths: /etc/apt/sources.list.d
+    patterns: "*.sources"
+  register: deb822_sources
+  become: true
+
+- name: Repoint deb822 sources to the reliable mirror
+  ansible.builtin.replace:
+    path: "{{ item.path }}"
+    regexp: '//{{ apt_mirror_from | regex_escape }}'
+    replace: '//{{ apt_mirror_to }}'
+  loop: "{{ deb822_sources.files }}"
+  loop_control:
+    label: "{{ item.path }}"
+  become: true
+
+- name: Refresh apt cache from the new mirror
+  ansible.builtin.apt:
+    update_cache: true
+  become: true

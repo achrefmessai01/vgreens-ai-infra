@@ -19,3 +19,24 @@
     encode gzip
     reverse_proxy {{ caddy_api_upstream }}
 }
+{% if caddy_web_root %}
+
+# Web UI (browser): serves the built SPA and proxies /api/* to the Job API on the
+# same origin, so session cookies work and there's no CORS. handle_path strips
+# the /api prefix (the API routes live at root, e.g. /jobs).
+{{ caddy_web_host }}:{{ caddy_https_port }} {
+{% if caddy_bind %}
+    bind {{ caddy_bind }}
+{% endif %}
+    tls internal
+    encode gzip
+    handle_path /api/* {
+        reverse_proxy {{ caddy_api_upstream }}
+    }
+    handle {
+        root * {{ caddy_web_root }}
+        try_files {path} /index.html
+        file_server
+    }
+}
+{% endif %}

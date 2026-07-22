@@ -36,7 +36,29 @@
     update_cache: true
   become: true
 
-- name: Caddyfile (reverse proxy for the Job API)
+- name: Ensure web root exists
+  ansible.builtin.file:
+    path: "{{ caddy_web_root }}"
+    state: directory
+    owner: caddy
+    group: caddy
+    mode: "0755"
+  become: true
+  when: caddy_web_root | length > 0
+
+- name: Deploy the built web app
+  ansible.builtin.copy:
+    src: "{{ caddy_web_src }}/"
+    dest: "{{ caddy_web_root }}/"
+    owner: caddy
+    group: caddy
+    mode: "0644"
+    directory_mode: "0755"
+  become: true
+  when: caddy_web_root | length > 0 and caddy_web_src | length > 0
+  notify: reload caddy
+
+- name: Caddyfile (reverse proxy for the Job API + optional web UI)
   ansible.builtin.template:
     src: Caddyfile.j2
     dest: /etc/caddy/Caddyfile
