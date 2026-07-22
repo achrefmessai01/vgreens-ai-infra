@@ -1,6 +1,8 @@
 ---
+# restart (not reload): reload uses Caddy's admin API on :2019, which we disable
+# with `admin off`, so `caddy reload` can't connect. restart re-reads the file.
 - name: reload caddy
   ansible.builtin.systemd:
     name: caddy
-    state: reloaded
+    state: restarted
   become: true

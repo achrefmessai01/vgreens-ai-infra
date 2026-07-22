@@ -4,6 +4,9 @@
     # internal CA only — no ACME, so no :80 redirect listener (avoids clashing
     # with any nginx/other service already using port 80/443 on this host).
     auto_https disable_redirects
+    # don't try to add the CA to the server's system trust store (the caddy user
+    # isn't a sudoer, and clients trust the CA explicitly instead).
+    skip_install_trust
 }
 
 # Job API over HTTPS with Caddy's internal CA. Clients trust the CA once
