@@ -1,0 +1,24 @@
+# Managed by Ansible (roles/docker_registry). Do not edit by hand.
+[Unit]
+Description=vGreens private Docker registry (registry:2)
+After=docker.service
+Requires=docker.service
+
+[Service]
+Restart=always
+RestartSec=5
+# --rm so a restart always starts clean; data + auth persist via bind mounts.
+ExecStartPre=-/usr/bin/docker rm -f vgreens-registry
+ExecStart=/usr/bin/docker run --rm --name vgreens-registry \
+  -p {{ registry_listen }}:5000 \
+  -v {{ registry_data_dir }}:/var/lib/registry \
+  -v {{ registry_auth_dir }}:/auth:ro \
+  -e REGISTRY_AUTH=htpasswd \
+  -e "REGISTRY_AUTH_HTPASSWD_REALM=vGreens Registry" \
+  -e REGISTRY_AUTH_HTPASSWD_PATH=/auth/htpasswd \
+  -e REGISTRY_STORAGE_DELETE_ENABLED=true \
+  {{ registry_image }}
+ExecStop=/usr/bin/docker stop vgreens-registry
+
+[Install]
+WantedBy=multi-user.target

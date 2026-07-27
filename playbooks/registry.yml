@@ -1,0 +1,91 @@
+---
+# Private LAN image registry so model images never round-trip through gitlab.com.
+#
+#   * registry:2 runs on sv01 (localhost:5000), fronted by the existing Caddy with
+#     its internal CA at https://registry.vgreens.lan:9443.
+#   * The CI runner (on sv01) pushes over localhost — instant.
+#   * The GPU worker pulls over the LAN — gigabit, not the slow WAN uplink.
+#
+# Prereqs: vault_registry_password set in group_vars/vault.yml; Caddy already
+# deployed (reverse-proxy.yml) so the internal CA exists.
+#
+# Run:  ansible-playbook playbooks/registry.yml -K
+# After this, re-run reverse-proxy.yml (it now renders the registry site too) OR
+# this playbook already re-renders Caddy on sv01 with the registry site included.
+
+- name: Deploy the private registry on sv01 (+ Caddy registry site)
+  hosts: runners
+  become: true
+  vars_files:
+    - ../inventories/production/group_vars/vault.yml
+  vars:
+    # registry container + Caddy site
+    registry_host: "registry.vgreens.lan"
+    registry_https_port: 9443
+    # Caddy vars — mirror reverse-proxy.yml so re-rendering doesn't drop the
+    # API/web sites, and add the registry site.
+    caddy_api_upstream: "172.16.20.89:8000"
+    caddy_bind: "{{ ansible_host }}"
+    caddy_https_port: 9443
+    caddy_web_root: "/var/www/vgreens-ai-web"
+    caddy_web_src: "{{ lookup('env', 'HOME') }}/Desktop/vgreens-ai-web/dist"
+    caddy_registry_host: "registry.vgreens.lan"
+    caddy_registry_upstream: "127.0.0.1:5000"
+    caddy_registry_bind: ""          # all interfaces, so the LAN worker can reach it
+  roles:
+    - docker_registry
+    - caddy
+
+- name: Trust the registry CA + resolve its hostname on registry clients
+  hosts: runners:platform
+  become: true
+  vars_files:
+    - ../inventories/production/group_vars/vault.yml
+  vars:
+    registry_host: "registry.vgreens.lan"
+    registry_https_port: 9443
+    caddy_data_dir: "/var/lib/caddy/.local/share/caddy"
+    # IP the client uses to reach sv01's registry. The runner (sv01) uses
+    # localhost; the GPU worker reaches sv01 over the LAN at its 172.16.20.x
+    # address (confirmed via `hostname -I` on sv01), NOT the VPN IP.
+    registry_ip_for_worker: "172.16.20.110"
+  tasks:
+    - name: Read the Caddy internal root CA from sv01
+      ansible.builtin.slurp:
+        src: "{{ caddy_data_dir }}/pki/authorities/local/root.crt"
+      delegate_to: sv01
+      run_once: true
+      register: caddy_root_ca
+
+    - name: Ensure the docker certs.d dir for the registry exists
+      ansible.builtin.file:
+        path: "/etc/docker/certs.d/{{ registry_host }}:{{ registry_https_port }}"
+        state: directory
+        mode: "0755"
+
+    - name: Install the registry CA so docker trusts its TLS
+      ansible.builtin.copy:
+        content: "{{ caddy_root_ca.content | b64decode }}"
+        dest: "/etc/docker/certs.d/{{ registry_host }}:{{ registry_https_port }}/ca.crt"
+        mode: "0644"
+
+    - name: Resolve registry.vgreens.lan on this host
+      ansible.builtin.lineinfile:
+        path: /etc/hosts
+        regexp: '\s{{ registry_host }}(\s|$)'
+        line: "{{ '127.0.0.1' if inventory_hostname == 'sv01' else registry_ip_for_worker }} {{ registry_host }}"
+        state: present
+
+    - name: Log docker in to the registry (root, used by the worker's docker runs)
+      ansible.builtin.command:
+        argv:
+          - docker
+          - login
+          - "{{ registry_host }}:{{ registry_https_port }}"
+          - "-u"
+          - "{{ registry_user | default('vgreens-ci') }}"
+          - "--password-stdin"
+        stdin: "{{ vault_registry_password }}"
+      register: registry_login
+      changed_when: "'Login Succeeded' in registry_login.stdout"
+      no_log: true

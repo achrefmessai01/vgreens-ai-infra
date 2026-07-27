@@ -16,6 +16,16 @@ caddy_web_host: "app.vgreens.lan"
 caddy_web_root: ""
 caddy_web_src: ""
 
+# Optional private image registry. When caddy_registry_host is set, Caddy adds a
+# third site that terminates TLS (internal CA) and proxies to the registry:2
+# container listening on localhost. Empty = no registry site.
+caddy_registry_host: ""
+caddy_registry_upstream: "127.0.0.1:5000"
+# The registry must be reachable by BOTH the CI runner (localhost) and the GPU
+# worker (over the LAN), so by default its site listens on all interfaces rather
+# than only the VPN address used for the API/web. Set to a specific IP to narrow.
+caddy_registry_bind: ""
+
 # When set, Caddy only listens on this interface/IP (e.g. the VPN address) so the
 # proxy isn't exposed on a public interface. Empty = listen on all interfaces.
 caddy_bind: ""

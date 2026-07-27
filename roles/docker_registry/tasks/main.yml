@@ -1,0 +1,67 @@
+---
+- name: Fail early if the registry password isn't set in the vault
+  ansible.builtin.assert:
+    that: registry_password | length > 0
+    fail_msg: >-
+      registry_password is empty. Add vault_registry_password to
+      inventories/production/group_vars/vault.yml (ansible-vault edit ...).
+
+- name: Registry data + auth directories
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    mode: "0750"
+  loop:
+    - "{{ registry_data_dir }}"
+    - "{{ registry_auth_dir }}"
+  become: true
+
+- name: Install htpasswd (apache2-utils)
+  ansible.builtin.apt:
+    name: apache2-utils
+    state: present
+    update_cache: true
+  become: true
+
+# registry:2 requires bcrypt htpasswd entries (htpasswd -B).
+- name: Generate the bcrypt htpasswd entry
+  ansible.builtin.command:
+    argv: [htpasswd, -Bbn, "{{ registry_user }}", "{{ registry_password }}"]
+  register: registry_htpasswd
+  changed_when: false
+  no_log: true
+
+- name: Write the htpasswd file
+  ansible.builtin.copy:
+    content: "{{ registry_htpasswd.stdout }}\n"
+    dest: "{{ registry_auth_dir }}/htpasswd"
+    owner: root
+    group: root
+    mode: "0640"
+  become: true
+  no_log: true
+  notify: restart registry
+
+- name: Install the registry systemd unit
+  ansible.builtin.template:
+    src: vgreens-registry.service.j2
+    dest: /etc/systemd/system/vgreens-registry.service
+    owner: root
+    group: root
+    mode: "0644"
+  become: true
+  notify: restart registry
+
+- name: Enable + start the registry
+  ansible.builtin.systemd:
+    name: vgreens-registry
+    enabled: true
+    state: started
+    daemon_reload: true
+  become: true
+
+- name: Wait for the registry to answer on its localhost port
+  ansible.builtin.wait_for:
+    host: "{{ registry_listen.split(':')[0] }}"
+    port: "{{ registry_listen.split(':')[1] | int }}"
+    timeout: 30

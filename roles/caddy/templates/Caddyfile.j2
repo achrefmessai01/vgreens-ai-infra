@@ -40,3 +40,16 @@
     }
 }
 {% endif %}
+{% if caddy_registry_host %}
+
+# Private OCI registry (registry:2 on localhost), TLS-terminated with the internal
+# CA. Clients (CI kaniko + the GPU worker) trust the CA and push/pull over the LAN
+# instead of round-tripping through gitlab.com. No body-size limit (large layers).
+{{ caddy_registry_host }}:{{ caddy_https_port }} {
+{% if caddy_registry_bind %}
+    bind {{ caddy_registry_bind }}
+{% endif %}
+    tls internal
+    reverse_proxy {{ caddy_registry_upstream }}
+}
+{% endif %}

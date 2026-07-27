@@ -1,0 +1,7 @@
+---
+- name: restart registry
+  ansible.builtin.systemd:
+    name: vgreens-registry
+    state: restarted
+    daemon_reload: true
+  become: true

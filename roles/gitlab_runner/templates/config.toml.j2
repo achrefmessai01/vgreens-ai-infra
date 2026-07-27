@@ -1,0 +1,19 @@
+# Managed by Ansible (vgreens-ai-infra). Do not edit by hand.
+concurrent = {{ gitlab_runner_concurrent }}
+check_interval = 3
+
+[[runners]]
+  name = "{{ gitlab_runner_name }}"
+  url = "{{ gitlab_runner_url }}"
+  token = "{{ gitlab_runner_token }}"
+  executor = "docker"
+  [runners.docker]
+    image = "{{ gitlab_runner_default_image }}"
+    privileged = false
+    tls_verify = false
+    disable_cache = false
+    volumes = ["/cache"]
+    cpus = "{{ gitlab_runner_job_cpus }}"
+    memory = "{{ gitlab_runner_job_memory }}"
+    pull_policy = ["if-not-present"]
+    shm_size = 0

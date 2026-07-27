@@ -1,0 +1,11 @@
+---
+# Ansible Phase B — first managed component: a constrained CPU GitLab Runner on
+# sv01 (Docker executor, concurrency 1, per-job CPU/memory caps, low OS priority,
+# no GPU). Requires vault_gitlab_runner_token in the encrypted vault.
+- name: Deploy constrained GitLab Runner on sv01
+  hosts: runners
+  become: true
+  vars_files:
+    - ../inventories/production/group_vars/vault.yml
+  roles:
+    - gitlab_runner

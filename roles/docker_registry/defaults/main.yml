@@ -1,0 +1,16 @@
+---
+# Private OCI registry (registry:2) on the LAN so model images never round-trip
+# through gitlab.com. The container listens on localhost only; Caddy terminates
+# TLS in front of it (same internal-CA listener as the API/web), so clients reach
+# it at https://{{ registry_host }}:{{ registry_https_port }}.
+registry_host: "registry.vgreens.lan"
+registry_https_port: 9443                 # served via Caddy (shared listener)
+registry_listen: "127.0.0.1:5000"         # container bind — localhost only
+registry_data_dir: "/opt/vgreens-registry/data"
+registry_auth_dir: "/opt/vgreens-registry/auth"
+registry_image: "registry:2"
+
+# Credentials. The username is fine in plain vars; the password MUST come from
+# the vault (inventories/production/group_vars/vault.yml → vault_registry_password).
+registry_user: "vgreens-ci"
+registry_password: "{{ vault_registry_password | default('') }}"

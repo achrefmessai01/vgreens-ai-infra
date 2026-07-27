@@ -1,0 +1,71 @@
+---
+- name: APT prerequisites
+  ansible.builtin.apt:
+    name: [ca-certificates, curl, gnupg, apt-transport-https]
+    state: present
+    update_cache: true
+  become: true
+
+- name: Keyring directory
+  ansible.builtin.file:
+    path: /etc/apt/keyrings
+    state: directory
+    mode: "0755"
+  become: true
+
+- name: GitLab Runner APT signing key
+  ansible.builtin.get_url:
+    url: https://packages.gitlab.com/runner/gitlab-runner/gpgkey
+    dest: /etc/apt/keyrings/gitlab-runner.asc
+    mode: "0644"
+  become: true
+
+- name: GitLab Runner APT repository
+  ansible.builtin.apt_repository:
+    repo: >-
+      deb [signed-by=/etc/apt/keyrings/gitlab-runner.asc]
+      https://packages.gitlab.com/runner/gitlab-runner/ubuntu/ {{ ansible_distribution_release }} main
+    filename: gitlab-runner
+    state: present
+  become: true
+
+- name: Install gitlab-runner
+  ansible.builtin.apt:
+    name: gitlab-runner
+    state: present
+    update_cache: true
+  become: true
+
+- name: systemd drop-in dir
+  ansible.builtin.file:
+    path: /etc/systemd/system/gitlab-runner.service.d
+    state: directory
+    mode: "0755"
+  become: true
+
+- name: Low-priority systemd override
+  ansible.builtin.template:
+    src: override.conf.j2
+    dest: /etc/systemd/system/gitlab-runner.service.d/override.conf
+    mode: "0644"
+  become: true
+  notify: [reload systemd, restart gitlab-runner]
+
+- name: Runner config (contains the auth token — 0600, never logged)
+  ansible.builtin.template:
+    src: config.toml.j2
+    dest: /etc/gitlab-runner/config.toml
+    owner: root
+    group: root
+    mode: "0600"
+  become: true
+  no_log: true
+  notify: restart gitlab-runner
+
+- name: Enable + start gitlab-runner
+  ansible.builtin.systemd:
+    name: gitlab-runner
+    enabled: true
+    state: started
+    daemon_reload: true
+  become: true

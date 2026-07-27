@@ -1,0 +1,6 @@
+# Managed by Ansible. Keep the runner low-priority so it never starves sv01's
+# VPN/camera/prod workloads.
+[Service]
+Nice=10
+IOSchedulingClass=idle
+CPUWeight=40

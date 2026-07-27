@@ -1,0 +1,82 @@
+---
+# Read-only fitness audit for sv01 as a CPU GitLab Runner host. sv01 is also the
+# VPN jump host and runs camera workloads, so we confirm headroom + connectivity
+# WITHOUT changing anything. No become.
+- name: sv01 — GitLab Runner host fitness (read-only)
+  hosts: runners
+  gather_facts: true
+  become: false
+  tasks:
+    - name: Host summary
+      ansible.builtin.debug:
+        msg: >-
+          {{ ansible_hostname }} |
+          {{ ansible_distribution }} {{ ansible_distribution_version }} |
+          {{ ansible_processor_vcpus }} vCPU |
+          {{ (ansible_memtotal_mb / 1024) | round(1) }} GiB RAM
+
+    - name: Load average + memory
+      ansible.builtin.command: "{{ item }}"
+      loop:
+        - "uptime"
+        - "free -h"
+      changed_when: false
+      register: load_mem
+
+    - name: Load / memory
+      ansible.builtin.debug:
+        msg: "{{ load_mem.results | map(attribute='stdout') | list }}"
+
+    - name: Disk (root + docker data disk)
+      ansible.builtin.command: "df -h / /home/vgreens/SSD_drive_1.8T"
+      changed_when: false
+      failed_when: false
+      register: disk
+
+    - name: Disk
+      ansible.builtin.debug:
+        var: disk.stdout_lines
+
+    - name: Docker present + running containers
+      ansible.builtin.command: "{{ item }}"
+      loop:
+        - "docker --version"
+        - "docker ps"
+      changed_when: false
+      failed_when: false
+      register: dock
+
+    - name: Docker
+      ansible.builtin.debug:
+        var: dock.results | map(attribute='stdout_lines') | list
+
+    - name: GitLab Runner already installed?
+      ansible.builtin.command: "gitlab-runner --version"
+      changed_when: false
+      failed_when: false
+      register: runner
+
+    - name: Runner status
+      ansible.builtin.debug:
+        msg: "{{ runner.stdout | default('not installed') if runner.rc == 0 else 'not installed' }}"
+
+    - name: Connectivity — GitLab, registry, and the Job API (from sv01)
+      ansible.builtin.uri:
+        url: "{{ item }}"
+        method: HEAD
+        status_code: [200, 301, 302, 401, 403]
+        timeout: 8
+        validate_certs: false
+      loop:
+        - https://gitlab.com
+        - https://registry.gitlab.com
+        - http://172.16.20.89:8000/health/live
+      failed_when: false
+      register: conn
+
+    - name: Reachability
+      ansible.builtin.debug:
+        msg: "{{ item.item }} -> {{ item.status | default('UNREACHABLE') }}"
+      loop: "{{ conn.results }}"
+      loop_control:
+        label: "{{ item.item }}"
